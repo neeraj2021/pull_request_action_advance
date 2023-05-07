@@ -17499,17 +17499,35 @@ async function run() {
 
     const octokit = new github.getOctokit(token);
 
-    const { data } = await octokit.rest.pulls.listCommits({
+    let { data: pull_request } = await octokit.rest.pulls.get({
       owner,
       repo,
       pull_number: pr_number,
     });
 
-    let discordData = "";
+    let discordData = "-------------------------------------------- \n";
 
-    for (const item of data) {
-      discordData += item.commit.message + "\n";
+    discordData += `Project Name: ${pull_request.base.repo.name} \n`;
+
+    discordData += `PR Creator: ${pull_request.assignee.login} \n`;
+
+    discordData += `PR Created on: ${new Date(
+      pull_request.created_at
+    ).toLocaleString()} \n`;
+
+    discordData += `Last Updated on: ${new Date(
+      pull_request.updated_at
+    ).toLocaleString()} \n`;
+
+    discordData += `PR Link: ${pull_request.html_url} \n`;
+
+    discordData += "Reviewers :  ";
+
+    for (const reviewer of pull_request.requested_reviewers) {
+      discordData += reviewer.login + " ";
     }
+
+    discordData = "\n--------------------------------------------";
 
     await axios.post(
       discord_url,
