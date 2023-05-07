@@ -17494,13 +17494,13 @@ async function run() {
     const pr_number = core.getInput("pr_number", { required: true });
     const github_api_key = core.getInput("github_api_key", { required: true });
     const discord_webhook_url = core.getInput("discord_webhook_url", {
-      required: true,
-    });
-    const telegram_bot_token = core.getInput("telegram_bot_token", {
-      required: true,
+      required: false,
     });
     const telegram_chat_id = core.getInput("telegram_chat_id", {
-      required: true,
+      required: false,
+    });
+    const telegram_bot_token = core.getInput("telegram_bot_token", {
+      required: telegram_chat_id ? true : false,
     });
 
     const octokit = new github.getOctokit(github_api_key);
