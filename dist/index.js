@@ -17527,7 +17527,7 @@ async function run() {
       discordData += reviewer.login + " ";
     }
 
-    discordData = "\n--------------------------------------------";
+    discordData += "\n--------------------------------------------";
 
     await axios.post(
       discord_url,
