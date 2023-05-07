@@ -10,9 +10,17 @@ inputs:
   pr_number:
     description: "The number of the pull request"
     required: true
-  token:
+  github_api_key:
     description: "The token to use to access the Github API"
     required: true
+  discord_webhook_url:
+    description: "Discord webhook URL to send message"
+    required: false
+  telegram_bot_token:
+    description: "Telegram bot token"
+  telegram_chat_id:
+    description: "Telegram chat id"
+
 runs:
   using: 'node16'
   main: 'dist/index.js'

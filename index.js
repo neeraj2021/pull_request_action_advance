@@ -2,17 +2,23 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 const axios = require("axios");
 
-const discord_url =
-  "https://discord.com/api/webhooks/1104692069383028777/6oibP5FzHH6w7qYgXyXuWtOWrUW_W4F0lOIJdxd98iYr9uSz6O2JOtB_y-X6uS8B5M4q";
-
 async function run() {
   try {
     const owner = core.getInput("owner", { required: true });
     const repo = core.getInput("repo", { required: true });
     const pr_number = core.getInput("pr_number", { required: true });
-    const token = core.getInput("token", { required: true });
+    const github_api_key = core.getInput("github_api_key", { required: true });
+    const discord_webhook_url = core.getInput("discord_webhook_url", {
+      required: true,
+    });
+    const telegram_bot_token = core.getInput("telegram_bot_token", {
+      required: true,
+    });
+    const telegram_chat_id = core.getInput("telegram_chat_id", {
+      required: true,
+    });
 
-    const octokit = new github.getOctokit(token);
+    const octokit = new github.getOctokit(github_api_key);
 
     let { data: pull_request } = await octokit.rest.pulls.get({
       owner,
@@ -20,42 +26,58 @@ async function run() {
       pull_number: pr_number,
     });
 
-    let discordData = "-------------------------------------------- \n";
+    const sendMessage = [];
 
-    discordData += `Project Name: ${pull_request.base.repo.name} \n`;
+    sendMessage.push(`Project: ${pull_request.base.repo.name}`);
+    sendMessage.push("");
 
-    discordData += `PR Creator: ${pull_request.assignee.login} \n`;
+    sendMessage.push(`Creator: ${pull_request.assignee.login}`);
 
-    discordData += `PR Created on: ${new Date(
-      pull_request.created_at
-    ).toLocaleString()} \n`;
+    sendMessage.push(
+      `Created At: ${new Date(pull_request.created_at).toLocaleString()}`
+    );
 
-    discordData += `Last Updated on: ${new Date(
-      pull_request.updated_at
-    ).toLocaleString()} \n`;
+    sendMessage.push(
+      `Updated At: ${new Date(pull_request.updated_at).toLocaleString()}`
+    );
+    sendMessage.push("");
 
-    discordData += `PR Link: ${pull_request.html_url} \n`;
+    sendMessage.push(`Link: ${pull_request.html_url}`);
 
-    discordData += "Reviewers :  ";
+    sendMessage.push("");
+
+    let reviewers = "Reviewers : ";
 
     for (const reviewer of pull_request.requested_reviewers) {
-      discordData += reviewer.login + " ";
+      reviewers += reviewer.login + ", ";
     }
 
-    discordData += "\n--------------------------------------------";
+    sendMessage.push(reviewers);
 
-    await axios.post(
-      discord_url,
-      {
-        username: "Neeraj Kumar",
-        content: discordData,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
+    // Send message to discord
+    if (discord_webhook_url) {
+      const discordText = sendMessage.join("\n");
+      await axios.post(
+        discord_webhook_url,
+        {
+          username: "Neeraj Kumar",
+          content: discordText,
         },
-      }
-    );
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    // Send message to telegram
+    if (telegram_bot_token && telegram_chat_id) {
+      const telegramText = sendMessage.join("%0A");
+      const telegramApiUrl = `https://api.telegram.org/bot${telegram_bot_token}/sendMessage?chat_id=${telegram_chat_id}&text=${telegramText}`;
+
+      await axios.get(telegramApiUrl);
+    }
   } catch (error) {
     core.setFailed(error.message);
   }
