@@ -1,19 +1,26 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
 const axios = require("axios");
+const moment = require("moment");
 
 async function run() {
   try {
     const owner = core.getInput("owner", { required: true });
+
     const repo = core.getInput("repo", { required: true });
+
     const pr_number = core.getInput("pr_number", { required: true });
+
     const github_api_key = core.getInput("github_api_key", { required: true });
+
     const discord_webhook_url = core.getInput("discord_webhook_url", {
       required: false,
     });
+
     const telegram_chat_id = core.getInput("telegram_chat_id", {
       required: false,
     });
+
     const telegram_bot_token = core.getInput("telegram_bot_token", {
       required: telegram_chat_id ? true : false,
     });
@@ -26,27 +33,42 @@ async function run() {
       pull_number: pr_number,
     });
 
+    if (pull_request?.user?.login?.toLowerCase().includes("dependabot[bot]")) {
+      return;
+    }
+
+    if (pull_request?.title?.toLowerCase().includes("wip")) {
+      return;
+    }
+
     const sendMessage = [];
 
-    sendMessage.push(`Project: ${pull_request.base.repo.name}`);
+    sendMessage.push(`✅ Pull request created or updated`);
+    sendMessage.push(`Project - ${pull_request?.base?.repo.name}`);
+    sendMessage.push(`Title - ${pull_request?.title}`);
     sendMessage.push("");
 
-    sendMessage.push(`Creator: ${pull_request.assignee.login}`);
+    sendMessage.push(`Author - ${pull_request?.user.login}`);
 
     sendMessage.push(
-      `Created At: ${new Date(pull_request.created_at).toLocaleString()}`
+      `Created at - ${moment(pull_request?.created_at).format(
+        "MMMM Do YYYY, h:mm:ss a"
+      )}`
     );
 
     sendMessage.push(
-      `Updated At: ${new Date(pull_request.updated_at).toLocaleString()}`
+      `Updated at - ${moment(pull_request?.updated_at).format(
+        "MMMM Do YYYY, h:mm:ss a"
+      )}`
     );
-    sendMessage.push("");
-
-    sendMessage.push(`Link: ${pull_request.html_url}`);
 
     sendMessage.push("");
 
-    let reviewers = "Reviewers : ";
+    sendMessage.push(`Link - ${pull_request?.html_url}`);
+
+    sendMessage.push("");
+
+    let reviewers = "Reviewers - ";
 
     for (const reviewer of pull_request.requested_reviewers) {
       reviewers += reviewer.login + ", ";
@@ -57,10 +79,10 @@ async function run() {
     // Send message to discord
     if (discord_webhook_url) {
       const discordText = sendMessage.join("\n");
-      await axios.post(
+      axios.post(
         discord_webhook_url,
         {
-          username: "Neeraj Kumar",
+          username: "Neeraj",
           content: discordText,
         },
         {
@@ -73,10 +95,12 @@ async function run() {
 
     // Send message to telegram
     if (telegram_bot_token && telegram_chat_id) {
-      const telegramText = sendMessage.join("%0A");
-      const telegramApiUrl = `https://api.telegram.org/bot${telegram_bot_token}/sendMessage?chat_id=${telegram_chat_id}&text=${telegramText}`;
+      const telegramText = sendMessage.join("\n");
+      const telegramApiUrl = `https://api.telegram.org/bot${telegram_bot_token}/sendMessage?chat_id=${telegram_chat_id}&text=${encodeURIComponent(
+        telegramText
+      )}`;
 
-      await axios.get(telegramApiUrl);
+      axios.get(telegramApiUrl);
     }
   } catch (error) {
     core.setFailed(error.message);
